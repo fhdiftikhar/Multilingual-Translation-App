@@ -1,0 +1,69 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function App() {
+    const [transcript, setTranscript] = useState('');
+    const [translatedText, setTranslatedText] = useState('');
+    const [audioUrl, setAudioUrl] = useState('');
+    const [inputLanguage, setInputLanguage] = useState('en-US');
+    const [outputLanguage, setOutputLanguage] = useState('es');
+
+    const handleTranscription = async (audioBlob) => {
+        const audioBase64 = await convertBlobToBase64(audioBlob);
+        const response = await axios.post('http://localhost:3001/api/speech-to-text', {
+            audio: audioBase64,
+            language: inputLanguage,
+        });
+        setTranscript(response.data.transcript);
+    };
+
+    const handleTranslation = async () => {
+        const response = await axios.post('http://localhost:3001/api/translate', {
+            text: transcript,
+            targetLanguage: outputLanguage,
+        });
+        setTranslatedText(response.data.translation);
+    };
+
+    const handleTextToSpeech = async () => {
+        const response = await axios.post('http://localhost:3001/api/text-to-speech', {
+            text: translatedText,
+            languageCode: outputLanguage,
+        });
+        setAudioUrl(response.data.audioUrl);
+    };
+
+    const convertBlobToBase64 = (blob) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+    return (
+        <div>
+            <h1>Real-Time Translator</h1>
+            <input
+                type="text"
+                placeholder="Input Language"
+                value={inputLanguage}
+                onChange={(e) => setInputLanguage(e.target.value)}
+            />
+            <input
+                type="text"
+                placeholder="Output Language"
+                value={outputLanguage}
+                onChange={(e) => setOutputLanguage(e.target.value)}
+            />
+            <button onClick={() => handleTranscription(new Blob())}>Start Speaking</button>
+            <p>Transcript: {transcript}</p>
+            <button onClick={handleTranslation}>Translate</button>
+            <p>Translated: {translatedText}</p>
+            <button onClick={handleTextToSpeech}>Play Audio</button>
+            {audioUrl && <audio controls src={audioUrl} />}
+        </div>
+    );
+}
+
+export default App;
